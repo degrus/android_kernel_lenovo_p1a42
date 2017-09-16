@@ -485,6 +485,16 @@ static size_t binder_buffer_size(struct binder_proc *proc,
 			struct binder_buffer, entry) - (size_t)buffer->data;
 }
 
+static inline long copy_from_user_preempt_disabled(void *to, const void __user *from, long n)
+{
+	long ret;
+
+	preempt_enable_no_resched();
+	ret = copy_from_user(to, from, n);
+	preempt_disable();
+	return ret;
+}
+
 static void binder_insert_free_buffer(struct binder_proc *proc,
 				      struct binder_buffer *new_buffer)
 {
@@ -2434,6 +2444,7 @@ static int binder_thread_write(struct binder_proc *proc,
 			ptr += sizeof(tr);
 			binder_transaction(proc, thread, &tr.transaction_data,
 					   cmd == BC_REPLY_SG, tr.buffers_size);
+
 			break;
 		}
 		case BC_TRANSACTION:
